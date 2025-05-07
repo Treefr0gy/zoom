@@ -101,11 +101,28 @@ camerasSelect.addEventListener("input", handleCameraChange);
 const welcome = document.getElementById("welcome");
 const welcomeForm = welcome.querySelector("form");
 
+function addMessage(message) {
+  const ul = call.querySelector("ul");
+  const li = document.createElement("li");
+  li.innerText = message;
+  ul.appendChild(li);
+}
+
+function handleMessageSubmit(event) {
+  event.preventDefault();
+  const input = call.querySelector("#msg input");
+  const value = input.value;
+  myDataChannel.send(value);
+  input.value = "";
+}
+
 async function initCall() {
   welcome.hidden = true;
   call.hidden = false;
   await getMeida();
   makeConnection();
+  const msgForm = call.querySelector("#msg");
+  msgForm.addEventListener("submit", handleMessageSubmit);
 }
 
 async function handleWelcomeSubmit(event) {
@@ -123,7 +140,9 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
 socket.on("welcome", async () => {
   myDataChannel = myPeerConnection.createDataChannel("chat");
-  myDataChannel.addEventListener("message", (event) => console.log(event.data));
+  myDataChannel.addEventListener("message", (event) => {
+    addMessage(event.data);
+  });
   console.log("made data channel");
   const offer = await myPeerConnection.createOffer();
   myPeerConnection.setLocalDescription(offer);
@@ -131,11 +150,17 @@ socket.on("welcome", async () => {
   socket.emit("offer", offer, roomName);
 });
 
+socket.on("bye", () => {
+  addMessage("someone left ㅠㅠ");
+  const peerFace = document.getElementById("peerFace");
+  peerFace.srcObject = null;
+});
+
 socket.on("offer", async (offer) => {
   myPeerConnection.addEventListener("datachannel", (event) => {
     myDataChannel = event.channel;
     myDataChannel.addEventListener("message", (event) => {
-      console.log(event.data);
+      addMessage(event.data);
     });
   });
   console.log("received the offer");
